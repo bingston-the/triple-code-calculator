@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Triple Code Calculator — custom text (contact separated)</title>
+<link rel="icon" type="image/png" href="favicon.png">
+<style>
+*{box-sizing:border-box;font-family:Arial,Helvetica,sans-serif}
+body{padding:20px;max-width:950px;margin:auto;background:#f9f9f9;color:#222}
+h1{font-size:1.6rem;margin-bottom:1rem}
+label{display:block;margin-top:1rem;font-weight:bold}
+input[type=number]{width:100%;padding:8px;font-size:1rem;margin-top:0.25rem;border:1px solid #ccc;border-radius:4px}
+button{padding:8px 16px;font-size:1rem;margin-top:1rem;margin-right:0.5rem;cursor:pointer;border:none;border-radius:4px;background:#1976d2;color:#fff;transition:background 0.2s}
+button:hover{background:#115293}
+#output{margin-top:1.5rem}
+#output h3{margin-top:1.2rem;margin-bottom:0.5rem}
+table{width:100%;border-collapse:collapse;margin-top:0.5rem}
+th,td{
+  border:1px solid #ccc;
+  padding:3px 4px;   /* compact */
+  text-align:center; /* center headers and numbers */
+}
+th{background:#efefef}
+/* Delta-row styling */
+tr.delta-row td{
+  background:#fff;
+  text-align:left;   /* keep sign+mag left-aligned */
+  height:1.5rem;
+  font-variant-numeric: tabular-nums;
+}
+.delta{color:#c62828;font-weight:bold;display:inline-block;white-space:nowrap}
+.delta.blank{visibility:hidden}
+.info p{margin:0}
+.info p + p{margin-top:0.6rem}  /* add separation for the contact line */
+footer{margin-top:2rem;font-size:0.9rem;color:#555;text-align:center}
+@media print{
+  body{background:#fff;color:#000}
+  #controls,#seed-section,h1{display:none!important}
+  #output{display:block;font-size:12pt}
+  table{page-break-inside:avoid}
+  footer{display:none}
+}
+</style>
+</head>
+<body>
+<h1>Triple Code Calculator</h1>
+
+<div id="seed-section">
+  <label for="seed">Seed (≤ 10,000):</label>
+  <input type="number" id="seed" min="1" max="10000" step="1" placeholder="Enter an integer seed">
+</div>
+
+<div id="controls">
+  <button id="generateBtn">Generate</button>
+  <button id="resetBtn">Reset</button>
+  <button id="printBtn">Print Output</button>
+</div>
+
+<div id="output"></div>
+
+<div class="info" style="margin-top:2rem">
+  <p>This Triple Code Calculator generates Pythagorean triples from integer seed values between 1 and 10,000.  Two patterns of addition and subtraction are obvious, but detailed analysis of only the first triple of each series will reveal two more patterns.  AI indicates that the calculator produces a tiny fraction of all possible triples, but that every other triple can be derived from these via simple multiplication.  Opening the calculator in two windows side-by-side will allow comparison of the odd and even derivative patterns and might help in the discovery of the two patterns hidden in the topmost triples.  Good luck with your search.</p>
+  <p>Contact: triplecodecalculator@proton.me</p>
+</div>
+
+<script>
+function buildTableWithDeltas(rows){
+  let html = '<table><thead><tr><th>A</th><th>B</th><th>C</th></tr></thead><tbody>';
+  for(let i=0;i<rows.length;i++){
+    const r = rows[i];
+    html += `<tr><td>${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td></tr>`;
+    if(i < rows.length - 1){
+      const next = rows[i+1];
+      const diffA = next[0] - r[0];
+      const diffB = next[1] - r[1];
+      const diffC = next[2] - r[2];
+      const signA = diffA > 0 ? '+' : (diffA < 0 ? '−' : '');
+      const signB = diffB > 0 ? '+' : (diffB < 0 ? '−' : '');
+      const signC = diffC > 0 ? '+' : (diffC < 0 ? '−' : '');
+      const magA = Math.abs(diffA);
+      const magB = Math.abs(diffB);
+      const magC = Math.abs(diffC);
+      html += '<tr class="delta-row">';
+      html += `<td>${signA ? '<span class="delta">'+signA+ ' ' + magA +'</span>' : '<span class="delta blank">·</span>'}</td>`;
+      html += `<td>${signB ? '<span class="delta">'+signB+ ' ' + magB +'</span>' : '<span class="delta blank">·</span>'}</td>`;
+      html += `<td>${signC ? '<span class="delta">'+signC+ ' ' + magC +'</span>' : '<span class="delta blank">·</span>'}</td>`;
+      html += '</tr>';
+    }
+  }
+  html += '</tbody></table>';
+  return html;
+}
+
+function buildTable(rows){
+  let html='<table><thead><tr><th>A</th><th>B</th><th>C</th></tr></thead><tbody>';
+  for(const r of rows){
+    html+=`<tr><td>${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td></tr>`;
+  }
+  html+='</tbody></table>';return html;
+}
+
+function generate(){
+  const seedInput=document.getElementById('seed');
+  const output=document.getElementById('output');
+  output.innerHTML='';
+  const seed=parseInt(seedInput.value,10);
+  if(isNaN(seed)) {alert('Please enter a seed number.');return;}
+  if(seed<1){alert('Seed must be positive.');return;}
+  if(seed>10000){alert('Seed too large. Please enter a number ≤ 10,000.');return;}
+
+  let table=[];let a,b,c,method;
+
+  if(seed%2!==0){ // odd – Pythagorean
+    method='Pythagorean (Odd)';
+    a=seed;
+    b=((a*a)-1)/2;
+    c=b+1;
+    table.push([a,b,c]);
+  } else {
+    method='Platonic (Even)';
+    a=seed;
+    b=((a/2)*(a/2))-1;
+    c=b+2;
+    table.push([a,b,c]);
+  }
+
+  if(seed%2!==0){
+    let add=4;
+    while(b>0){
+      a=a+(seed+seed);
+      b=b-add;
+      c=c+add;
+      table.push([a,b,c]);
+      add+=4;
+    }
+  }else{
+    let add=3;
+    while(b>0){
+      a=a+seed;
+      b=b-add;
+      c=c+add;
+      table.push([a,b,c]);
+      add+=2;
+    }
+  }
+
+  const derivatives=table.length-1;
+
+  let html=`<p><strong>Method:</strong> ${method}</p>`;
+  html+=`<p><strong>Number of Derivatives:</strong> ${derivatives}</p>`;
+  html+='<h3>Triples</h3>';
+  html+=buildTableWithDeltas(table);
+
+  const squared=table.map(t=>t.map(x=>x*x));
+  html+='<h3>Squares of Triples</h3>';html+=buildTable(squared);
+
+  output.innerHTML=html;
+}
+
+document.getElementById('generateBtn').addEventListener('click',generate);
+document.getElementById('resetBtn').addEventListener('click',()=>{
+  document.getElementById('seed').value='';
+  document.getElementById('output').innerHTML='';
+});
+document.getElementById('printBtn').addEventListener('click',()=>{
+  const output=document.getElementById('output');
+  if(!output.innerHTML.trim()){
+    alert("Nothing to print. Please generate output first.");
+    return;
+  }
+  window.print();
+});
+</script>
+</body>
+</html>
